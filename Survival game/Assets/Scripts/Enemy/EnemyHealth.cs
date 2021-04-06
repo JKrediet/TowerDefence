@@ -12,6 +12,7 @@ public class EnemyHealth : BaseHealth
             //elemental effects
             BurnStuff(burnDuration, burnDamage, crit);
             FreezeStuff(freezeDuration, freezeSlow, freezeChance);
+            StartCoroutine(LightningStuff(lightningDamage, lightningChainAmount, lightningRange, crit, freezeSlow, freezeChance));
 
             Health -= amount;
             if (damagePopUp)
