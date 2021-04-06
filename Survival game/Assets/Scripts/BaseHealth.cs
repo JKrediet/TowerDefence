@@ -21,7 +21,7 @@ public class BaseHealth : MonoBehaviour
     //freeze
     public float totalFreezeDuration;
     protected bool isFrozen;
-    public GameObject freezeSlowObject;
+    public GameObject freezeSlowObject, freezeIce;
 
     protected virtual void Start()
     {
@@ -84,9 +84,17 @@ public class BaseHealth : MonoBehaviour
             int roll = Random.Range(0, 99);
             if (roll < freezeSlow)
             {
+                isFrozen = true;
+                freezeIce.SetActive(isFrozen);
                 enemyController.agent.speed = 0;
+                Invoke("UnFreeze", 2);
             }
         }
+    }
+    public void UnFreeze()
+    {
+        isFrozen = false;
+        freezeIce.SetActive(isFrozen);
     }
     //lightning
     public void LightningStuff(float lightningDamage, float lightningChainAmount, float lightningRange)
