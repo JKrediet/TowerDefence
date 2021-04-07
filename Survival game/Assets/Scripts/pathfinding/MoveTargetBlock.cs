@@ -7,7 +7,7 @@ public class MoveTargetBlock : MonoBehaviour
     public LayerMask hitlayers;
     void Update()
     {
-        if (Input.GetButtonDown("fire1"))
+        if (Input.GetButtonDown("Fire1"))
         {
             Vector3 mouse = Input.mousePosition;
             Ray castPoint = Camera.main.ScreenPointToRay(mouse);
