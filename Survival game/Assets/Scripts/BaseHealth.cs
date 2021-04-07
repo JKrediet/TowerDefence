@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class BaseHealth : MonoBehaviour
 {
@@ -20,17 +21,23 @@ public class BaseHealth : MonoBehaviour
 
     //freeze
     public float totalFreezeDuration;
-    protected bool isFrozen;
+    public bool isFrozen;
     public GameObject freezeSlowObject, freezeIce;
+
+    //lightning
+    public LayerMask mask;
+    public List<Transform> objectsHit;
+    public LineRenderer line;
 
     protected virtual void Start()
     {
         Maxhealth = Health;
+        objectsHit = new List<Transform>();
         if (GetComponent<EnemyBehavior>())
         {
             enemyController = GetComponent<EnemyBehavior>();
         }
-    }                           //damage        crit        burn Damage     burn duration       freeze duration         slow                freeze chance    lightning dmaage
+    }                           //damage        crit        burn Damage     burn duration       freeze duration         slow                freeze chance    lightning dmaage           //lghnintg chain amount   lightning range
     public virtual void DoDamage(float amount, bool crit, float burnDamage, float burnDuration, float freezeDuration, float freezeSlow, float freezeChance, float lightningDamage, float lightningChainAmount, float lightningRange)
     {
         Health -= amount;
@@ -38,7 +45,7 @@ public class BaseHealth : MonoBehaviour
         //elemental effects
         BurnStuff(burnDuration, burnDamage, crit);
         FreezeStuff(freezeDuration, freezeSlow, freezeChance);
-        LightningStuff(lightningDamage, lightningChainAmount, lightningRange);
+        StartCoroutine(LightningStuff(lightningDamage, lightningChainAmount, lightningRange, crit, freezeSlow, freezeChance));
 
         if (Health <= 0)
         {
@@ -58,10 +65,13 @@ public class BaseHealth : MonoBehaviour
         totalBurnDuration += burnDuration;
         if (totalBurnDuration > 0)
         {
-            if (Time.time > nextBurnCall)
+            if (damage > 1)
             {
-                nextBurnCall = Time.time + burnCooldown;
-                StartCoroutine(TakeBurnDamage(damage, crit));
+                if (Time.time > nextBurnCall)
+                {
+                    nextBurnCall = Time.time + burnCooldown;
+                    StartCoroutine(TakeBurnDamage(damage, crit));
+                }
             }
         }
     }
@@ -69,25 +79,28 @@ public class BaseHealth : MonoBehaviour
     public void FreezeStuff(float freezeDuration, float freezeSlow, float freezeChance)
     {
         //slow
-        totalFreezeDuration += freezeDuration;
-        if (totalFreezeDuration > 0)
+        if (enemyController)
         {
+            totalFreezeDuration += freezeDuration;
+            if (totalFreezeDuration > 0)
+            {
+                if (!isFrozen)
+                {
+                    enemyController.agent.speed = enemyController.movementSpeed * ((100 - freezeSlow) / 100);
+                }
+            }
+
             if (!isFrozen)
             {
-                enemyController.agent.speed = enemyController.movementSpeed * ((100 - freezeSlow) / 100);
-            }
-        }
-
-        if (!isFrozen)
-        {
-            //freeze
-            int roll = Random.Range(0, 99);
-            if (roll < freezeSlow)
-            {
-                isFrozen = true;
-                freezeIce.SetActive(isFrozen);
-                enemyController.agent.speed = 0;
-                Invoke("UnFreeze", 2);
+                //freeze
+                int roll = Random.Range(0, 99);
+                if (roll < freezeChance)
+                {
+                    isFrozen = true;
+                    freezeIce.SetActive(isFrozen);
+                    enemyController.agent.speed = 0;
+                    Invoke("UnFreeze", 2);
+                }
             }
         }
     }
@@ -97,11 +110,61 @@ public class BaseHealth : MonoBehaviour
         freezeIce.SetActive(isFrozen);
     }
     //lightning
-    public void LightningStuff(float lightningDamage, float lightningChainAmount, float lightningRange)
+    public IEnumerator LightningStuff(float lightningDamage, float lightningChainAmount, float lightningRange, bool crit, float freezeSlow, float freezeChance)
     {
         if(lightningChainAmount > 0)
         {
-
+            objectsHit.Add(gameObject.transform);
+            Collider[] enemies = Physics.OverlapSphere(transform.position, lightningRange, mask);
+            float distanceCheck = 1000;
+            Transform NextChainTarget = null;
+            for (int i = 0; i < enemies.Length; i++)
+            {
+                if (enemies[i] != null)
+                {
+                    if (!objectsHit.Contains(enemies[i].transform))
+                    {
+                        float enemyDistance = Vector3.Distance(transform.position, enemies[i].transform.position);
+                        if (enemyDistance <= distanceCheck)
+                        {
+                            distanceCheck = enemyDistance;
+                            NextChainTarget = enemies[i].transform;
+                        }
+                    }
+                }
+            }
+            if (lightningDamage > 1)
+            {
+                if (NextChainTarget != null)
+                {
+                    if (transform != null)
+                    {
+                        //line inspawnen 
+                        LineRenderer lijntje = Instantiate(line, transform);
+                        lijntje.SetPosition(0, transform.position);
+                        lijntje.SetPosition(1, NextChainTarget.position);
+                        Destroy(lijntje, 0.1f);
+                        yield return new WaitForSeconds(0.1f);
+                        //damage
+                        if (NextChainTarget != null)
+                        {
+                            NextChainTarget.GetComponent<BaseHealth>().objectsHit = new List<Transform>(objectsHit);
+                            float freeze = 0;
+                            float burn = 0;
+                            if (totalFreezeDuration > 0)
+                            {
+                                freeze = 2;
+                            }
+                            if (totalBurnDuration > 0)
+                            {
+                                burn = 2;
+                            }
+                            NextChainTarget.GetComponent<BaseHealth>().DoDamage(lightningDamage, crit, lightningDamage * 0.1f, burn, freeze, freezeSlow, freezeChance, lightningDamage * 0.5f, lightningChainAmount--, lightningRange);
+                        }
+                    }
+                }
+            }
+            objectsHit.Clear();
         }
     }
     private void Update()

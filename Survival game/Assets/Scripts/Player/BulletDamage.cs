@@ -75,7 +75,7 @@ public class BulletDamage : MonoBehaviour
         {
             if (shooter.GetComponent<Towers>() || shooter.GetComponent<PlayerHealth>())
             {
-                if (_hit.GetComponent<EnemyBehavior>())
+                if (_hit.GetComponent<EnemyHealth>())
                 {
                     if (objectsHit.Contains(_hit.transform))
                     {

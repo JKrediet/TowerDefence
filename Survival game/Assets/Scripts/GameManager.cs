@@ -193,7 +193,7 @@ public class GameManager : MonoBehaviour
         tower_critChance.text = $"Crit chance: {towers.critChance.ToString("F0")}%";
         tower_critDamage.text = $"Crit damage: {towers.critDamage.ToString("F0")}%";
         tower_chain.text = $"Chain amount: {towers.chain.ToString("F0")}";
-        tower_dps.text = $"DPS: {towers.damage * towers.attackSpeed + (towers.critChance * 0.01f * towers.critDamage)}";
+        tower_dps.text = $"DPS: {(towers.damage * towers.attackSpeed + (towers.critChance * 0.01f * towers.critDamage)).ToString("F0")}";
     }
     public void DeSelectTower() // hier
     {

@@ -398,7 +398,7 @@ MonoBehaviour:
   critChance: 0
   critDamage: 0
   chain: 0
-  element: 4
+  element: 1
   equip: {fileID: 3194651575087723732}
   itemInfo: {fileID: 3194651574452794421}
   numberInInventory: 4
