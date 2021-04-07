@@ -21,12 +21,13 @@ public class BaseHealth : MonoBehaviour
 
     //freeze
     public float totalFreezeDuration;
-    protected bool isFrozen;
+    public bool isFrozen;
     public GameObject freezeSlowObject, freezeIce;
 
     //lightning
     public LayerMask mask;
     public List<Transform> objectsHit;
+    public LineRenderer line;
 
     protected virtual void Start()
     {
@@ -36,7 +37,7 @@ public class BaseHealth : MonoBehaviour
         {
             enemyController = GetComponent<EnemyBehavior>();
         }
-    }                           //damage        crit        burn Damage     burn duration       freeze duration         slow                freeze chance    lightning dmaage
+    }                           //damage        crit        burn Damage     burn duration       freeze duration         slow                freeze chance    lightning dmaage           //lghnintg chain amount   lightning range
     public virtual void DoDamage(float amount, bool crit, float burnDamage, float burnDuration, float freezeDuration, float freezeSlow, float freezeChance, float lightningDamage, float lightningChainAmount, float lightningRange)
     {
         Health -= amount;
@@ -64,10 +65,13 @@ public class BaseHealth : MonoBehaviour
         totalBurnDuration += burnDuration;
         if (totalBurnDuration > 0)
         {
-            if (Time.time > nextBurnCall)
+            if (damage > 1)
             {
-                nextBurnCall = Time.time + burnCooldown;
-                StartCoroutine(TakeBurnDamage(damage, crit));
+                if (Time.time > nextBurnCall)
+                {
+                    nextBurnCall = Time.time + burnCooldown;
+                    StartCoroutine(TakeBurnDamage(damage, crit));
+                }
             }
         }
     }
@@ -90,7 +94,7 @@ public class BaseHealth : MonoBehaviour
             {
                 //freeze
                 int roll = Random.Range(0, 99);
-                if (roll < freezeSlow)
+                if (roll < freezeChance)
                 {
                     isFrozen = true;
                     freezeIce.SetActive(isFrozen);
@@ -129,11 +133,36 @@ public class BaseHealth : MonoBehaviour
                     }
                 }
             }
-            if (NextChainTarget != null)
+            if (lightningDamage > 1)
             {
-                yield return new WaitForSeconds(0.1f);
-                NextChainTarget.GetComponent<BaseHealth>().objectsHit = new List<Transform>(objectsHit);
-                NextChainTarget.GetComponent<BaseHealth>().DoDamage(lightningDamage, crit, lightningDamage * 0.1f, totalBurnDuration, totalFreezeDuration, freezeSlow, freezeChance, lightningDamage * 0.5f, lightningChainAmount--, lightningRange);
+                if (NextChainTarget != null)
+                {
+                    if (transform != null)
+                    {
+                        //line inspawnen 
+                        LineRenderer lijntje = Instantiate(line, transform);
+                        lijntje.SetPosition(0, transform.position);
+                        lijntje.SetPosition(1, NextChainTarget.position);
+                        Destroy(lijntje, 0.1f);
+                        yield return new WaitForSeconds(0.1f);
+                        //damage
+                        if (NextChainTarget != null)
+                        {
+                            NextChainTarget.GetComponent<BaseHealth>().objectsHit = new List<Transform>(objectsHit);
+                            float freeze = 0;
+                            float burn = 0;
+                            if (totalFreezeDuration > 0)
+                            {
+                                freeze = 2;
+                            }
+                            if (totalBurnDuration > 0)
+                            {
+                                burn = 2;
+                            }
+                            NextChainTarget.GetComponent<BaseHealth>().DoDamage(lightningDamage, crit, lightningDamage * 0.1f, burn, freeze, freezeSlow, freezeChance, lightningDamage * 0.5f, lightningChainAmount--, lightningRange);
+                        }
+                    }
+                }
             }
             objectsHit.Clear();
         }
